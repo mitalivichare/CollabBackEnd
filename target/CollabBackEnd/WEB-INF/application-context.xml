@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xsi:schemaLocation="http://www.springframework.org/schema/websocket
+	 	http://www.springframework.org/schema/websocket/spring-websocket-4.3.xsd
+		http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+	
+	<!-- To work with @Autowired and other annotations -->
+	<context:annotation-config/>
+	
+	<context:component-scan base-package="com.collaboration"/>
+	<mvc:annotation-driven>
+  		<mvc:message-converters>
+		    <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+		        <property name="objectMapper">
+		            <bean class="com.collabration.json.HibernateAwareObjectMapper" />
+		        </property>
+		    </bean>
+		</mvc:message-converters>	
+ 	</mvc:annotation-driven>
+
+	<!-- To work with oracle database -->
+	<!-- Database configuration will come here -->
+	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" />
+		<property name="url" value="jdbc:oracle:thin:@localhost:1521:orcl" />
+		<property name="username" value="scott" />
+		<property name="password" value="Oracle123" />
+	</bean>
+
+	<!-- Configure the SessionFactory -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="packagesToScan">
+			<list>
+				<value>com.collaboration</value>
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<!-- Transaction Manager Bean -->
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+	
+	<bean id="transactionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+			<property name="sessionFactory" ref="sessionFactory" />
+	</bean>	
+
+	<!-- user defined classes -->
+	<!-- working with user role and profile -->
+	<bean id="userProfileDAO" class="com.collabration.dao.UserProfileDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="userProfileService" class="com.collabration.services.UserProfileService">
+		<property name="userProfileDAO" ref="userProfileDAO"/>
+	</bean>
+
+	<bean id="roleDAO" class="com.collabration.dao.RoleDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="roleService" class="com.collabration.services.RoleService">
+		<property name="roleDAO" ref="roleDAO"/>
+	</bean>
+
+	<bean id="userDAO" class="com.collabration.dao.UserDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="userService" class="com.collabration.services.UserServices">
+		<property name="userDAO" ref="userDAO"/>
+	</bean>
+
+
+	<!-- working with blog and forums -->
+
+	<bean id="categoryDAO" class="com.collabration.dao.CategoryDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="categoryService" class="com.collabration.services.CategoryService">
+		<property name="categoryDAO" ref="categoryDAO"/>
+	</bean>
+
+	<bean id="forumDAO" class="com.collabration.dao.ForumDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="forumService" class="com.collabration.services.ForumService">
+		<property name="forumDAO" ref="forumDAO"/>
+	</bean>
+
+	<bean id="blogDAO" class="com.collabration.dao.BlogDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="blogService" class="com.collabration.services.BlogService">
+		<property name="blogDAO" ref="blogDAO"/>
+	</bean>
+
+	<bean id="commentDAO" class="com.collabration.dao.CommentDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="commentService" class="com.collabration.services.CommentService">
+		<property name="commentDAO" ref="commentDAO"/>
+	</bean>
+
+
+	<bean id="postDAO" class="com.collabration.dao.PostDAO">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+ 	<bean id="postService" class="com.collabration.services.PostService">
+		<property name="postDAO" ref="postDAO"/>
+	</bean>
+	<!-- Sending email configuration -->
+    
+    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <property name="host" value="smtp.gmail.com"/>
+        <property name="port" value="587"/>
+        <property name="username" value="sahar.dt.niit@gmail.com"/>
+        <property name="password" value="sahar@123"/>
+        <property name="javaMailProperties">
+            <props>
+                <prop key="mail.transport.protocol">smtp</prop>
+                <prop key="mail.smtp.auth">true</prop>
+                <prop key="mail.smtp.starttls.enable">true</prop>
+                <prop key="mail.debug">true</prop>
+            </props>
+        </property>
+    </bean>
+    
+    
+    <!-- Configuration for web-sockets -->
+    <websocket:message-broker application-destination-prefix="/app">
+        <websocket:stomp-endpoint path="/chat">
+            <websocket:sockjs/>
+        </websocket:stomp-endpoint>
+        <websocket:simple-broker prefix="/topic"/>
+    </websocket:message-broker>    
+
+	<!-- to load static resources -->
+	<mvc:resources location="/resources/" mapping="/resources/**"></mvc:resources>
+
+</beans>
