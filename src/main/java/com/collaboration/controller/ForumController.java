@@ -1,116 +1,127 @@
 package com.collaboration.controller;
 
-import java.lang.annotation.Repeatable;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.collaboration.model.Categories;
-import com.collaboration.model.CommentModel;
-import com.collaboration.model.ForumBasicModel;
-import com.collaboration.model.ForumModel;
-import com.collaboration.model.ForumViewModel;
-import com.collaboration.model.Forums;
-import com.collaboration.model.PostModel;
-import com.collaboration.model.Posts;
-import com.collaboration.model.UserProfiles;
-import com.collaboration.services.CategoryService;
-import com.collaboration.services.ForumService;
-import com.collaboration.services.PostService;
-import com.collaboration.services.UserProfileService;
-
+import org.springframework.web.util.UriComponentsBuilder;
+ 
+import com.collaboration.model.Forum;
+import com.collaboration.service.ForumService;
+  
 @RestController
 public class ForumController {
-
-	@Autowired
-	private ForumService forumService;
-
-	@Autowired
-	private CategoryService categoryService;
-	
-	
-	@Autowired
-	private PostService postService;
-	
-	@Autowired
-	private UserProfileService userProfileService;
-
-	@RequestMapping(value = "admin/forums/admin/forum/all")
-	public @ResponseBody List<ForumModel> getForums() {
-		// Create a list of forum model
-		List<ForumModel> list = new ArrayList<ForumModel>();
-		List<Forums> forums = null;
-		List<Categories> categories = this.categoryService.getAll();
-		ForumModel model = null;
-		for(Categories category: categories) {
-			forums = this.forumService.getForumsByCategory(category.getId());
-			model = new ForumModel();
-			model.setCategory(category);
-			model.setForums(forums);
-			list.add(model);
-		}
-		
-		return list;		
-	}
-	@RequestMapping(value="admin/forums/admin/remove/{forumId}")		
-	public void deleteForum(@PathVariable("forumId") String forumId){
-		Forums forum = this.forumService.get(forumId);
-		forumService.remove(forum);
-	}
-	
-	@RequestMapping(value = "public/forums/all")
-	
-	public @ResponseBody List<ForumBasicModel> getPublicForums() {
-		
-		List<ForumBasicModel> listForumBasicModel = new ArrayList<ForumBasicModel>();
-		// get all the categories first
-		List<Categories> categories = this.categoryService.getAll();
-		
-		ForumBasicModel forumBasicModel = null;
-		List<Forums> forumList = null;
-		
-		for(Categories category: categories) {
-			// fetch all the forums based on categories
-			forumList = this.forumService.getForumsByCategory(category.getId());
-			
-			if(forumList!=null) {				
-				for(Forums forum: forumList) {
-					forumBasicModel = new ForumBasicModel(category, forum);
-					listForumBasicModel.add(forumBasicModel);
-				}				
-			}
-			
-			
-		}
-		
-		return listForumBasicModel;		
-	}
-	@RequestMapping(value = "public/view/forum/get/forum/{forumId}")
-	public @ResponseBody ForumViewModel getForumView(@PathVariable("forumId") String forumId) {		
-		Forums     forum= this.forumService.get(forumId);
-		
-		ForumViewModel forumViewModel = new ForumViewModel(forum);
-		
-		PostModel postModel;
-		UserProfiles profile;
-		// Get all the posts
-		List<Posts> posts = this.postService.getPostsByForum(forumId);
-		if(posts!=null) {
-			for(Posts post: posts) {
-				profile = this.userProfileService.get(post.getUserId());					
-				postModel = new PostModel(post, profile);
-				forumViewModel.add(postModel);
-			}
-		}
-		 				
-		return forumViewModel;
-	}
-	
-	
+  
+    @Autowired
+    ForumService forumService;  //Service which will do all data retrieval/manipulation work
+  
+     
+    //-------------------Retrieve All Forums--------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/", method = RequestMethod.GET)
+    public ResponseEntity<List<Forum>> listAllForums() {
+        List<Forum> forums = forumService.findAllForums();
+        if(forums.isEmpty()){
+            return new ResponseEntity<List<Forum>>(HttpStatus.NO_CONTENT);//You many decide to return HttpStatus.NOT_FOUND
+        }
+        return new ResponseEntity<List<Forum>>(forums, HttpStatus.OK);
+    }
+  
+  
+     
+    //-------------------Retrieve Single Forum--------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Forum> getForum(@PathVariable("id") long id) {
+        System.out.println("Fetching Forum with id " + id);
+        Forum forum = forumService.findById(id);
+        if (forum == null) {
+            System.out.println("Forum with id " + id + " not found");
+            return new ResponseEntity<Forum>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<Forum>(forum, HttpStatus.OK);
+    }
+  
+      
+      
+    //-------------------Create a Forum--------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/", method = RequestMethod.POST)
+    public ResponseEntity<Void> createForum(@RequestBody Forum forum,    UriComponentsBuilder ucBuilder) {
+        System.out.println("Creating Forum " + forum.getTitle());
+  
+        if (forumService.isForumExist(forum)) {
+            System.out.println("A Forum with name " + forum.getTitle() + " already exist");
+            return new ResponseEntity<Void>(HttpStatus.CONFLICT);
+        }
+  
+        forumService.saveForum(forum);
+  
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(ucBuilder.path("/forum/{id}").buildAndExpand(forum.getId()).toUri());
+        return new ResponseEntity<Void>(headers, HttpStatus.CREATED);
+    }
+  
+     
+      
+    //------------------- Update a Forum --------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/{id}", method = RequestMethod.PUT)
+    public ResponseEntity<Forum> updateForum(@PathVariable("id") long id, @RequestBody Forum forum) {
+        System.out.println("Updating Forum " + id);
+          
+        Forum currentForum = forumService.findById(id);
+          
+        if (currentForum==null) {
+            System.out.println("Forum with id " + id + " not found");
+            return new ResponseEntity<Forum>(HttpStatus.NOT_FOUND);
+        }
+  
+        currentForum.setTitle(forum.getTitle());
+        currentForum.setDescription(forum.getDescription());
+        currentForum.setCategory(forum.getCategory());
+          
+        forumService.updateForum(currentForum);
+        return new ResponseEntity<Forum>(currentForum, HttpStatus.OK);
+    }
+  
+     
+     
+    //------------------- Delete a Forum --------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity<Forum> deleteBlog(@PathVariable("id") long id) {
+        System.out.println("Fetching & Deleting Forum with id " + id);
+  
+        Forum forum = forumService.findById(id);
+        if (forum == null) {
+            System.out.println("Unable to delete. Forum with id " + id + " not found");
+            return new ResponseEntity<Forum>(HttpStatus.NOT_FOUND);
+        }
+  
+        forumService.deleteForumById(id);
+        return new ResponseEntity<Forum>(HttpStatus.NO_CONTENT);
+    }
+  
+      
+     
+    //------------------- Delete All Forums --------------------------------------------------------
+      
+    @RequestMapping(value = "/forum/", method = RequestMethod.DELETE)
+    public ResponseEntity<Forum> deleteAllForums() {
+        System.out.println("Deleting All Blogs");
+  
+        forumService.deleteAllForums();
+        return new ResponseEntity<Forum>(HttpStatus.NO_CONTENT);
+    }
+  
 }
+

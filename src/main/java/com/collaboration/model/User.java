@@ -1,100 +1,89 @@
 package com.collaboration.model;
 
-import java.util.UUID;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
-import javax.persistence.Transient;
 
+import org.springframework.stereotype.Component;
 @Entity
-@Table(name = "user_auth")
+@Component
 public class User {
-
-	
-	@Id
-	@Column(name = "user_id")	
-	private String id;		
-	
-	private String username;
-	
-	private String password;
-	
-	private boolean enabled;
-	
-	private String activationToken;
-	
-	@Transient
-	private String confirmPassword;
-	
-	@OneToOne(mappedBy="user", cascade = CascadeType.ALL)
-	private UserProfiles userProfile;
-			
-	
-	public User() {
-		this.id = "USR" + UUID.randomUUID().toString().substring(24).toUpperCase();
-		this.activationToken = UUID.randomUUID().toString().substring(24).toUpperCase();
-	}
-
-
-	@Override
-	public String toString() {
-		return "User [id=" + id + ", username=" + username + ", password=" + password + ", enabled=" + enabled
-				+ ", activationToken=" + activationToken + ", confirmPassword=" + confirmPassword + "]";
-	}
-
-
-	public String getId() {
-		return id;
-	}
-
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
-
-	public String getUsername() {
-		return username;
-	}
-
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-
-	public String getPassword() {
-		return password;
-	}
-
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-
-	public boolean isEnabled() {
-		return enabled;
-	}
-
-
-	public void setEnabled(boolean enabled) {
-		this.enabled = enabled;
-	}
-
-
-	public UserProfiles getUserProfile() {
-		return userProfile;
-	}
-
-
-	public void setUserProfile(UserProfiles userProfile) {
-		this.userProfile = userProfile;
-	}
-			
-	
+	 @Id
+    private long id;
+     
+    private String username;
+     
+    private String address;
+     
+    private String email;
+    
+     
+    public User(long id, String username, String address, String email){
+        this.id = id;
+        this.username = username;
+        this.address = address;
+        this.email = email;
+    }
+ 
+    public long getId() {
+        return id;
+    }
+ 
+    public void setId(long id) {
+        this.id = id;
+    }
+ 
+    public String getUsername() {
+        return username;
+    }
+ 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+ 
+    public String getAddress() {
+        return address;
+    }
+ 
+    public void setAddress(String address) {
+        this.address = address;
+    }
+ 
+    public String getEmail() {
+        return email;
+    }
+ 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+ 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (id ^ (id >>> 32));
+        return result;
+    }
+ 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!(obj instanceof User))
+            return false;
+        User other = (User) obj;
+        if (id != other.id)
+            return false;
+        return true;
+    }
+ 
+    @Override
+    public String toString() {
+        return "User [id=" + id + ", username=" + username + ", address=" + address
+                + ", email=" + email + "]";
+    }
+     
+ 
+     
 }
